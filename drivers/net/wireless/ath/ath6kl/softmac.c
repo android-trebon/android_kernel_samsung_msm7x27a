@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2011 Atheros Communications Inc.
+ * Copyright (c) 2015 Liam Demafelix
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -62,7 +63,6 @@ static void ath6kl_calculate_crc(u32 target_type, u8 *data, size_t len)
 	ath6kl_dbg(ATH6KL_DBG_BOOT, "New Checksum: %u\n", checksum);
 }
 
-#if defined(CONFIG_MACH_PX) || defined(CONFIG_MACH_TREBON)
 static int ath6kl_fetch_nvmac_info(struct ath6kl *ar)
 {
 	char softmac_filename[256];
@@ -111,36 +111,14 @@ static int ath6kl_fetch_nvmac_info(struct ath6kl *ar)
 	return ret;
 }
 
-#else
-static int ath6kl_fetch_mac_file(struct ath6kl *ar)
-{
-	const struct firmware *fw_entry;
-	int ret = 0;
-
-
-	ret = request_firmware(&fw_entry, MAC_FILE, ar->dev);
-	if (ret)
-		return ret;
-
-	ath6kl_softmac_len = fw_entry->size;
-	ath6kl_softmac = kmemdup(fw_entry->data, fw_entry->size, GFP_KERNEL);
-
-	if (ath6kl_softmac == NULL)
-		ret = -ENOMEM;
-
-	release_firmware(fw_entry);
-
-	return ret;
-}
-#endif
+static int ath6kl_fetch_mac_file(struct ath6kl *ar) {}
 
 void ath6kl_mangle_mac_address(struct ath6kl *ar, u8 locally_administered_bit)
 {
 	u8 *ptr_mac;
 	int i, ret;
-#if defined(CONFIG_MACH_PX) || defined(CONFIG_MACH_TREBON)
+
 	unsigned int softmac[6];
-#endif
 
 	switch (ar->target_type) {
 	case TARGET_TYPE_AR6003:
@@ -162,12 +140,7 @@ void ath6kl_mangle_mac_address(struct ath6kl *ar, u8 locally_administered_bit)
 		   ptr_mac[0], ptr_mac[1], ptr_mac[2],
 		   ptr_mac[3], ptr_mac[4], ptr_mac[5]);
 
-#if defined(CONFIG_MACH_PX) || defined(CONFIG_MACH_TREBON)
-#ifdef CONFIG_MACH_JENA
-	ret = ath6kl_fetch_mac_file(ar);
-#else
 	ret = ath6kl_fetch_nvmac_info(ar);
-#endif
 
 	if (ret) {
 		ath6kl_err("MAC address file not found\n");
@@ -193,24 +166,8 @@ void ath6kl_mangle_mac_address(struct ath6kl *ar, u8 locally_administered_bit)
 	printk("MAC from ptr_mac %02X:%02X:%02X:%02X:%02X:%02X\n",
 			ptr_mac[0], ptr_mac[1], ptr_mac[2],
 			ptr_mac[3], ptr_mac[4], ptr_mac[5]);
-#ifdef CONFIG_MACH_TREBON
-	kfree(ath6kl_softmac);
-#else
-	vfree(ath6kl_softmac);
-#endif
-#else
-	ret = ath6kl_fetch_mac_file(ar);
-	if (ret) {
-		ath6kl_err("MAC address file not found\n");
-		return;
-	}
-
-	for (i = 0; i < ETH_ALEN; ++i) {
-	   ptr_mac[i] = ath6kl_softmac[i] & 0xff;
-	}
 
 	kfree(ath6kl_softmac);
-#endif
 
 	if (locally_administered_bit)
 		ptr_mac[0] |= 0x02;
