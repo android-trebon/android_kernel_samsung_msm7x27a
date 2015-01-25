@@ -163,7 +163,7 @@ void ath6kl_mangle_mac_address(struct ath6kl *ar, u8 locally_administered_bit)
 		   ptr_mac[3], ptr_mac[4], ptr_mac[5]);
 
 #if defined(CONFIG_MACH_PX) || defined(CONFIG_MACH_TREBON)
-#ifdef CONFIG_MACH_TREBON
+#ifdef CONFIG_MACH_JENA
 	ret = ath6kl_fetch_mac_file(ar);
 #else
 	ret = ath6kl_fetch_nvmac_info(ar);
